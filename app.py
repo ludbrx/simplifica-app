@@ -7,9 +7,26 @@ import urllib.parse
 import requests
 import calendar
 from datetime import date, timedelta
+import streamlit.components.v1 as components # Necessário para injetar o Google Analytics/AdSense
 
-# --- CONFIGURAÇÃO DA PÁGINA (FORÇANDO MENU ABERTO E NOVA LOGO) ---
+# --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Simplifica | Geradores, Calculadoras e Ferramentas Online", page_icon="💡", layout="wide", initial_sidebar_state="expanded")
+
+# --- INJEÇÃO DE CÓDIGO NO <HEAD> (GOOGLE ANALYTICS E ADSENSE) ---
+# Você precisará trocar o ID 'G-XXXXXXXXXX' pelo seu ID real do Google Analytics no futuro.
+# E injetar o script de verificação do AdSense aqui depois.
+google_analytics_script = """
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXXXXX');
+    </script>
+"""
+# A "gambiarra" profissional para jogar o script pro cabeçalho do navegador:
+components.html(f"{google_analytics_script}", height=0, width=0)
+
 
 # --- MEMÓRIA DE ESTADO ---
 if "view_mode" not in st.session_state:
@@ -17,30 +34,42 @@ if "view_mode" not in st.session_state:
 if "current_tool" not in st.session_state:
     st.session_state.current_tool = "Sorteador Completo"
 
-# --- INJEÇÃO DE CSS ---
+# --- INJEÇÃO DE CSS (MOBILE RESPONSIVO, REMOÇÃO DE FOTOS E DESIGN) ---
 st.markdown("""
     <style>
-        /* Oculta os itens padrão do topo, mas mantém o cabeçalho acima de tudo */
-        header {
-            background-color: transparent !important;
-            z-index: 999990 !important; 
-        }
-        [data-testid="stToolbar"], .stAppDeployButton {
-            display: none !important;
+        /* Oculta os itens padrão do topo e do rodapé (A sua foto de gerador no canto inferior direito) */
+        header { background-color: transparent !important; z-index: 999990 !important; }
+        [data-testid="stToolbar"], .stAppDeployButton, .viewerBadge_container__1JCIV, .viewerBadge_link__1S137 { display: none !important; }
+        footer {visibility: hidden;}
+        
+        /* ---------------------------------------------------- */
+        /* RESPONSIVIDADE (MEDIA QUERIES) - O SEGREDO DO CELULAR */
+        /* ---------------------------------------------------- */
+        
+        /* COMPUTADOR (Telas Maiores que 768px): Remove botão e fixa o menu */
+        @media (min-width: 769px) {
+            [data-testid="stSidebarCollapseButton"], [data-testid="collapsedControl"] { display: none !important; }
+            .block-container { padding-top: 1rem !important; max-width: 1050px; }
         }
         
-        /* REMOVE COMPLETAMENTE OS BOTÕES DE ESCONDER/EXPANDIR A BARRA LATERAL */
-        [data-testid="stSidebarCollapseButton"], [data-testid="collapsedControl"] {
-            display: none !important;
+        /* CELULAR (Telas Menores que 768px): Mostra o botão de abrir/fechar escuro */
+        @media (max-width: 768px) {
+            [data-testid="stSidebarCollapseButton"], [data-testid="collapsedControl"] {
+                display: flex !important; visibility: visible !important;
+                background-color: #0F172A !important; border-radius: 8px !important;
+                margin-top: 10px !important; margin-left: 10px !important; padding: 2px !important;
+                z-index: 999999 !important; box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
+            }
+            [data-testid="collapsedControl"] svg { fill: #FFFFFF !important; color: #FFFFFF !important; }
+            .block-container { padding-top: 3rem !important; } /* Empurra o conteúdo pra baixo da setinha */
         }
+        
+        /* ---------------------------------------------------- */
         
         /* REMOVE O ESPAÇO VAZIO NO TOPO DA BARRA LATERAL PARA SUBIR A LOGO */
-        [data-testid="stSidebar"] > div:first-child {
-            padding-top: 0rem !important;
-        }
+        [data-testid="stSidebar"] > div:first-child { padding-top: 0rem !important; }
         
-        .block-container {padding-top: 1rem !important; max-width: 1050px;}
-        
+        /* Design da Barra Lateral e Botões */
         [data-testid="stSidebar"] { background-color: #0F172A; border-right: 1px solid #1E293B; }
         [data-testid="stSidebar"] * { color: #F8FAFC !important; }
         
@@ -52,21 +81,21 @@ st.markdown("""
         }
         [data-testid="stSidebar"] div.stButton > button:hover { background-color: #1E293B; color: #3B82F6 !important; }
         
+        /* Caixas de Texto (Design Fluido e Bonito) */
         .stTextArea textarea, .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], .stDateInput input {
-            background-color: #F8FAFC !important; border: 1.5px solid #CBD5E1 !important; border-radius: 10px !important; color: #1E293B !important;
+            background-color: #F8FAFC !important; border: 1.5px solid #CBD5E1 !important; border-radius: 10px !important; color: #1E293B !important; width: 100%;
         }
         
         .recibo-box {
             background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 40px; 
             font-family: 'Courier New', Courier, monospace; color: #1E293B; box-shadow: 5px 5px 15px rgba(0,0,0,0.05);
-            margin-top: 20px; line-height: 1.6;
+            margin-top: 20px; line-height: 1.6; overflow-x: auto; /* Evita quebrar layout no mobile */
         }
         .info-box-premium {
             background-color: #EFF6FF; border-left: 5px solid #3B82F6; padding: 20px; border-radius: 5px; color: #1E293B;
-            margin-bottom: 25px; line-height: 1.6; font-size: 15px;
+            margin-bottom: 25px; line-height: 1.6; font-size: clamp(14px, 2vw, 16px); /* Fonte responsiva */
         }
         .spacing { margin-bottom: 20px; }
-        footer {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -79,16 +108,16 @@ def set_page(mode, tool=None):
 # ==========================================
 c_espaco1, c_busca, c_espaco2 = st.columns([1, 2, 1])
 with c_busca:
-    busca = st.text_input("🔍 O que você precisa resolver hoje?", placeholder="Ex: Salário, Sorteio, Texto, Senha, Erros...")
+    busca = st.text_input("🔍 O que você precisa resolver hoje?", placeholder="Ex: Salário, Sorteio, Texto, Senha...")
 
 st.markdown("<div class='spacing'></div>", unsafe_allow_html=True)
 
-# Centralização perfeita com 4 botões
-c_v1, c_btn0, c_btn1, c_btn2, c_btn3, c_v2 = st.columns([0.5, 1.5, 1.5, 1.5, 1.5, 0.5])
+# Centralização com 4 botões adaptados para telas pequenas
+c_btn0, c_btn1, c_btn2, c_btn3 = st.columns(4)
 with c_btn0:
     if st.button("🏠 Início", use_container_width=True): set_page("Inicio")
 with c_btn1: 
-    if st.button("📌 Sobre Nós", use_container_width=True): set_page("Sobre")
+    if st.button("📌 Sobre", use_container_width=True): set_page("Sobre")
 with c_btn2: 
     if st.button("🛡️ Privacidade", use_container_width=True): set_page("Privacidade")
 with c_btn3: 
@@ -115,7 +144,6 @@ sinonimos = {
 # ==========================================
 # BARRA LATERAL (CATEGORIAS)
 # ==========================================
-# O CSS foi alterado para zerar o padding superior, e o margin-top foi negativado para puxar a logo bem para cima.
 st.sidebar.markdown("<h2 style='margin-top: -15px;'>💡 Simplifica</h2>", unsafe_allow_html=True)
 st.sidebar.markdown("<p style='font-size: 13px; color: #94A3B8; margin-top: -10px;'>Aplicações web gratuitas para o seu dia a dia.</p>", unsafe_allow_html=True)
 
@@ -170,12 +198,11 @@ st.sidebar.markdown("<br><p style='font-size: 11px; color: #64748B;'>🍪 O uso 
 # PÁGINAS LEGAIS E INICIAL (COMPLETAS)
 # ==========================================
 if st.session_state.view_mode == "Inicio":
-    st.markdown("<h1 style='text-align: center; font-size: 3.5rem; color: #1E293B; margin-bottom: 0;'>👋 Olá! Bem-vindo ao Simplifica</h1>", unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align: center; color: #64748B; margin-top: 5px; margin-bottom: 40px;'>Seu assistente digital inteligente. Tudo o que você precisa em um só lugar.</h3>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; font-size: clamp(2rem, 5vw, 3.5rem); color: #1E293B; margin-bottom: 0;'>👋 Olá! Bem-vindo ao Simplifica</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: #64748B; margin-top: 5px; margin-bottom: 40px; font-size: clamp(1rem, 3vw, 1.5rem);'>Seu assistente digital inteligente. Tudo o que você precisa em um só lugar.</h3>", unsafe_allow_html=True)
     
-    # Novo design moderno com grid de cards
     st.markdown("""
-    <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;'>
+    <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;'>
         <div style='background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border-left: 5px solid #3B82F6; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>
             <h3 style='color: #1D4ED8; margin-top: 0;'>📝 Textos e Códigos</h3>
             <p style='font-size: 15px; color: #334155; margin-bottom: 0;'>Corrija erros gramaticais, resuma textos, conte palavras, formate maiúsculas/minúsculas e limpe documentos com facilidade.</p>
