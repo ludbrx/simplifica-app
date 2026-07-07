@@ -1,34 +1,4 @@
 import streamlit as st
-
-# Injete este bloco logo após as configurações iniciais da página (st.set_page_config)
-st.markdown(
-    """
-    <style>
-    /* Esconde o menu de hambúrguer no topo direito */
-    #MainMenu {visibility: hidden;}
-    
-    /* Esconde o cabeçalho padrão */
-    header {visibility: hidden;}
-    
-    /* Esconde o rodapé padrão 'Made with Streamlit' */
-    footer {visibility: hidden;}
-    
-    /* Remove a linha decorativa colorida do topo */
-    div[data-testid="stDecoration"] {display: none !important;}
-    
-    /* Esconde o botão de deploy e o widget de status/avatar no canto inferior direito */
-    .stAppDeployButton {display: none !important;}
-    div[data-testid="stStatusWidget"] {display: none !important;}
-    
-    /* Força a remoção de qualquer elemento flutuante do painel do Streamlit */
-    footer, .viewerBadge, div[class^="st-emotion-cache"] button {
-        display: none !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-import streamlit as st
 import re
 import random
 import string
